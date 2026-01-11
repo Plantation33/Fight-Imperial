@@ -9,8 +9,26 @@ canvas{display:block;margin:auto;background:#3a7;}
 #ui{margin:20px;}
 button{margin:5px;padding:10px 20px;font-size:16px;cursor:pointer;}
 #deck{margin-top:10px;}
-.cardSlot{display:inline-block;width:80px;height:50px;border:1px solid white;margin:2px;line-height:50px;text-align:center;cursor:pointer;}
+.cardSlot{
+  display:inline-block;
+  width:100px;
+  height:50px;
+  border:1px solid white;
+  margin:2px;
+  text-align:center;
+  cursor:pointer;
+  vertical-align:top;
+  padding:2px;
+  box-sizing:border-box;
+}
 .cardSlot.selected{border-color:gold;}
+.cardSlot span{
+  display:block;
+  font-size:12px;
+  line-height:14px;
+  white-space:normal;
+  word-wrap:break-word;
+}
 </style>
 </head>
 <body>
@@ -23,9 +41,7 @@ let elixir=10,maxElixir=10,last=0;
 let playerUnits=[],enemyUnits=[];
 let gold=0,gameState="menu";
 let chestResultText="";
-let collection=[]; // unlocked cards
-let deck=[]; // selected cards for battle
-let selectedCard=null;
+let collection=[],deck=[],selectedCard=null;
 
 // CARD DEFINITIONS
 const allCards=[
@@ -70,33 +86,44 @@ function showMenu(){
 showMenu();
 
 // DECK SELECTION
-function showDeck(){
-  gameState="deck";
-  ui.innerHTML=`
-    <h2>Select cards for your deck (1 or more)</h2>
-    <button onclick="startBattle()" ${deck.length===0?'disabled':''}>Start Battle</button>
-    <button onclick="showMenu()">Back</button>
-  `;
-  deckDiv.style.display="block";
-  updateDeckUI();
+function showDeck() {
+    gameState = "deck";
+    deckDiv.style.display = "block";
+    ui.innerHTML = `
+        <h2>Select cards for your deck (1 or more)</h2>
+        <button id="startBattleBtn" ${deck.length === 0 ? 'disabled' : ''}>Start Battle</button>
+        <button onclick="showMenu()">Back</button>
+    `;
+    updateDeckUI();
+
+    document.getElementById("startBattleBtn").onclick = startBattle;
 }
 
-function updateDeckUI(){
-  deckDiv.innerHTML='';
-  collection.forEach(c=>{
-    let slot=document.createElement("div");
-    slot.className="cardSlot";
-    slot.innerText=c.name;
-    if(deck.includes(c)) slot.classList.add("selected");
-    slot.onclick=()=>{
-      if(deck.includes(c)) deck = deck.filter(x=>x!==c);
-      else deck.push(c);
-      updateDeckUI();
-      showDeck(); // refresh Start button state
-    }
-    deckDiv.appendChild(slot);
-  });
-  deckDiv.innerHTML+='<p>Deck: '+deck.map(c=>c.name).join(', ')+'</p>';
+function updateDeckUI() {
+    deckDiv.innerHTML = '';
+    collection.forEach(c => {
+        let slot = document.createElement("div");
+        slot.className = "cardSlot";
+
+        let text = document.createElement("span");
+        text.innerText = c.name;
+        slot.appendChild(text);
+
+        if(deck.includes(c)) slot.classList.add("selected");
+
+        slot.addEventListener("click", () => {
+            if(deck.includes(c)) deck = deck.filter(x => x !== c);
+            else deck.push(c);
+            updateDeckUI();
+            showDeck(); // refresh Start button
+        });
+
+        deckDiv.appendChild(slot);
+    });
+
+    let deckNames = document.createElement("p");
+    deckNames.innerText = "Deck: " + (deck.length > 0 ? deck.map(c => c.name).join(', ') : "(none selected)");
+    deckDiv.appendChild(deckNames);
 }
 
 // SHOP
@@ -118,8 +145,7 @@ function showShop(){
 function buyChest(cost){
   if(gold<cost){chestResultText="Not enough gold!"; showShop(); return;}
   gold-=cost;
-  let r=Math.random();
-  let newCard;
+  let r=Math.random(),newCard;
   if(cost==500){ if(r<0.05) newCard=getRandomByTier("legendary"); else if(r<0.2) newCard=getRandomByTier("epic"); else if(r<0.6) newCard=getRandomByTier("rare"); else newCard=getRandomByTier("common"); }
   else if(cost==2000){ if(r<0.15) newCard=getRandomByTier("legendary"); else if(r<0.4) newCard=getRandomByTier("epic"); else if(r<0.8) newCard=getRandomByTier("rare"); else newCard=getRandomByTier("common"); }
   else{ if(r<0.3) newCard=getRandomByTier("legendary"); else if(r<0.7) newCard=getRandomByTier("epic"); else if(r<0.95) newCard=getRandomByTier("rare"); else newCard=getRandomByTier("common"); }
@@ -140,9 +166,9 @@ function startBattle(){
 }
 
 // ARENA CONSTANTS
-const bridgeY=250; // y position of bridges
+const bridgeY=250;
 const bridgeHeight=40; 
-const waterY=bridgeY; // water zone
+const waterY=bridgeY;
 const waterHeight=40;
 
 // DEPLOY UNIT
@@ -150,7 +176,7 @@ canvas.onclick=e=>{
   if(gameState!=="play") return;
   if(deck.length===0) return;
   let lane=e.offsetX<210?0:1;
-  if(!selectedCard) selectedCard = deck[0]; // default to first card if none selected
+  if(!selectedCard) selectedCard = deck[0];
   let card=selectedCard;
   if(card.name==="Pirahna" && (e.offsetY<waterY || e.offsetY>waterY+waterHeight)) return;
   if(card.name!=="Pirahna" && e.offsetY>=waterY && e.offsetY<=waterY+waterHeight) return;
@@ -196,7 +222,7 @@ function update(dt){
   playerUnits=playerUnits.filter(u=>u.hp>0&&u.y>0);
   enemyUnits=enemyUnits.filter(e=>e.hp>0&&e.y<600);
 
-  if(enemyUnits.length===0 && playerUnits.length>0 && now>5000){gold+=100; alert("You Win! +100 Gold"); showMenu();}
+  if(enemyUnits.length===0 && playerUnits.length>0 && performance.now()>5000){gold+=100; alert("You Win! +100 Gold"); showMenu();}
   if(enemyUnits.some(e=>e.y>=600)){alert("You Lose! +0 Gold"); showMenu();}
 }
 
@@ -205,17 +231,24 @@ function draw(){
   ctx.clearRect(0,0,420,600);
   if(gameState!=="play") return;
 
-  // DRAW ARENA
+  // ARENA
   ctx.fillStyle="#2a5"; ctx.fillRect(0,0,420,600);
   ctx.fillStyle="#06f"; ctx.fillRect(0,waterY,420,waterHeight);
   ctx.fillStyle="#8b4513"; ctx.fillRect(50,bridgeY,100,bridgeHeight);
   ctx.fillRect(270,bridgeY,100,bridgeHeight);
 
   // UNITS
-  playerUnits.forEach(u=>{ctx.fillStyle=u.tier==="legendary"?"gold":u.tier==="epic"?"purple":u.tier==="rare"?"blue":"green";ctx.fillRect(u.x-15,u.y-15,30,30); ctx.fillText(u.name,u.x-20,u.y-20);});
+  playerUnits.forEach(u=>{
+    ctx.fillStyle=u.tier==="legendary"?"gold":u.tier==="epic"?"purple":u.tier==="rare"?"blue":"green";
+    ctx.fillRect(u.x-15,u.y-15,30,30);
+    ctx.fillStyle="white";
+    ctx.font="10px sans-serif";
+    ctx.fillText(u.name,u.x-20,u.y-20);
+  });
   enemyUnits.forEach(e=>{ctx.fillStyle="red";ctx.fillRect(e.x-15,e.y-15,30,30);});
 
-  ctx.fillStyle="white"; ctx.fillText("Elixir: "+elixir.toFixed(1),10,20);
+  ctx.fillStyle="white"; ctx.font="14px sans-serif";
+  ctx.fillText("Elixir: "+elixir.toFixed(1),10,20);
 }
 
 // MAIN LOOP
@@ -224,4 +257,5 @@ loop(0);
 </script>
 </body>
 </html>
+
 
