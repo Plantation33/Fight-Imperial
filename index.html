@@ -2,12 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Mini Clash Royale Arena</title>
+<title>Fight Imperial</title>
 <style>
-body{margin:0;font-family:sans-serif;background:#222;color:white;}
+body{margin:0;font-family:sans-serif;background:#222;color:white;text-align:center;}
 canvas{display:block;margin:auto;background:#3a7;}
-#ui{text-align:center;}
-.cardSlot{display:inline-block;width:50px;height:50px;border:1px solid white;margin:2px;line-height:50px;text-align:center;cursor:pointer;}
+#ui{margin:20px;}
+button{margin:5px;padding:10px 20px;font-size:16px;cursor:pointer;}
+#deck{margin-top:10px;}
+.cardSlot{display:inline-block;width:80px;height:50px;border:1px solid white;margin:2px;line-height:50px;text-align:center;cursor:pointer;}
+.cardSlot.selected{border-color:gold;}
 </style>
 </head>
 <body>
@@ -21,17 +24,15 @@ let playerUnits=[],enemyUnits=[];
 let gold=0,gameState="menu";
 let chestResultText="";
 let collection=[]; // unlocked cards
-let deck=[]; // 8 cards for battle
+let deck=[]; // selected cards for battle
 let selectedCard=null;
 
 // CARD DEFINITIONS
 const allCards=[
-  // COMMON
   {name:"Sworder",tier:"common",cost:3,hp:120,dmg:20,type:"melee"},
   {name:"Dwarf Dudes",tier:"common",cost:1,hp:50,dmg:5,type:"melee",count:3},
   {name:"Bowperson",tier:"common",cost:3,hp:80,dmg:15,type:"ranged"},
   {name:"Burn Spirit",tier:"common",cost:2,hp:60,dmg:25,type:"spell"},
-  // RARE
   {name:"Pirahna",tier:"rare",cost:4,hp:70,dmg:5,type:"water",aoe:true,lifetime:10000,immortal:true},
   {name:"Canoneer",tier:"rare",cost:3,hp:100,dmg:30,type:"ranged"},
   {name:"Collosus",tier:"rare",cost:5,hp:400,dmg:40,type:"tank"},
@@ -39,11 +40,9 @@ const allCards=[
   {name:"Lavasphere",tier:"rare",cost:4,hp:0,dmg:50,type:"spell"},
   {name:"Luchador",tier:"rare",cost:4,hp:120,dmg:25,type:"melee",ability:{cost:2,action:"jumpAttack"}},
   {name:"Magnet",tier:"epic",cost:4,hp:0,dmg:0,type:"spell",ability:{action:"pull",duration:5000}},
-  // EPIC
   {name:"Dwarf Army",tier:"epic",cost:4,hp:50,dmg:5,type:"melee",count:6},
   {name:"Sorcerer",tier:"epic",cost:5,hp:100,dmg:15,type:"summon",summon:"Dwarf Army"},
   {name:"Tank",tier:"epic",cost:6,hp:300,dmg:20,type:"fastBullet"},
-  // LEGENDARY
   {name:"Firebird",tier:"legendary",cost:6,hp:200,dmg:40,type:"fly"},
   {name:"Electroly",tier:"legendary",cost:6,hp:250,dmg:70,type:"ranged"},
   {name:"Disembodied Head",tier:"legendary",cost:5,hp:50,dmg:90,type:"rush"},
@@ -60,33 +59,41 @@ const deckDiv=document.getElementById("deck");
 function showMenu(){
   gameState="menu";
   deckDiv.style.display="none";
-  ui.innerHTML='<h1>Mini Clash Royale</h1>'+
-    '<button onclick="prepareDeck()">Play Battle</button>'+
-    '<button onclick="showShop()">Shop</button>'+
-    '<p>Gold: '+gold+'</p>'+
-    (chestResultText?'<p>'+chestResultText+'</p>':'');
+  ui.innerHTML=`
+    <h1>Fight Imperial</h1>
+    <p>Gold: ${gold}</p>
+    <button onclick="showDeck()">Choose Deck</button>
+    <button onclick="showShop()">Shop</button>
+    ${chestResultText?'<p>'+chestResultText+'</p>':''}
+  `;
 }
 showMenu();
 
 // DECK SELECTION
-function prepareDeck(){
+function showDeck(){
   gameState="deck";
-  ui.innerHTML='<h2>Select 8 cards for your deck</h2><button onclick="startBattle()">Start Battle</button>';
+  ui.innerHTML=`
+    <h2>Select cards for your deck (1 or more)</h2>
+    <button onclick="startBattle()" ${deck.length===0?'disabled':''}>Start Battle</button>
+    <button onclick="showMenu()">Back</button>
+  `;
   deckDiv.style.display="block";
   updateDeckUI();
 }
+
 function updateDeckUI(){
   deckDiv.innerHTML='';
-  collection.forEach((c,i)=>{
+  collection.forEach(c=>{
     let slot=document.createElement("div");
     slot.className="cardSlot";
     slot.innerText=c.name;
+    if(deck.includes(c)) slot.classList.add("selected");
     slot.onclick=()=>{
       if(deck.includes(c)) deck = deck.filter(x=>x!==c);
-      else if(deck.length<8) deck.push(c);
+      else deck.push(c);
       updateDeckUI();
+      showDeck(); // refresh Start button state
     }
-    if(deck.includes(c)) slot.style.borderColor="gold";
     deckDiv.appendChild(slot);
   });
   deckDiv.innerHTML+='<p>Deck: '+deck.map(c=>c.name).join(', ')+'</p>';
@@ -96,13 +103,15 @@ function updateDeckUI(){
 function showShop(){
   gameState="shop";
   deckDiv.style.display="none";
-  ui.innerHTML='<h1>Shop</h1>'+
-    '<p>Gold: '+gold+'</p>'+
-    '<button onclick="buyChest(500)">Basic Chest (500)</button>'+
-    '<button onclick="buyChest(2000)">Obsidian Chest (2000)</button>'+
-    '<button onclick="buyChest(5000)">God Chest (5000)</button>'+
-    '<button onclick="showMenu()">Back</button>'+
-    (chestResultText?'<p>'+chestResultText+'</p>':'');
+  ui.innerHTML=`
+    <h1>Shop</h1>
+    <p>Gold: ${gold}</p>
+    <button onclick="buyChest(500)">Basic Chest (500)</button>
+    <button onclick="buyChest(2000)">Obsidian Chest (2000)</button>
+    <button onclick="buyChest(5000)">God Chest (5000)</button>
+    <button onclick="showMenu()">Back</button>
+    ${chestResultText?'<p>'+chestResultText+'</p>':''}
+  `;
 }
 
 // CHEST OPENING
@@ -111,22 +120,9 @@ function buyChest(cost){
   gold-=cost;
   let r=Math.random();
   let newCard;
-  if(cost==500){ // Basic
-    if(r<0.05) newCard=getRandomByTier("legendary");
-    else if(r<0.2) newCard=getRandomByTier("epic");
-    else if(r<0.6) newCard=getRandomByTier("rare");
-    else newCard=getRandomByTier("common");
-  }else if(cost==2000){ // Obsidian
-    if(r<0.15) newCard=getRandomByTier("legendary");
-    else if(r<0.4) newCard=getRandomByTier("epic");
-    else if(r<0.8) newCard=getRandomByTier("rare");
-    else newCard=getRandomByTier("common");
-  }else{ // God chest
-    if(r<0.3) newCard=getRandomByTier("legendary");
-    else if(r<0.7) newCard=getRandomByTier("epic");
-    else if(r<0.95) newCard=getRandomByTier("rare");
-    else newCard=getRandomByTier("common");
-  }
+  if(cost==500){ if(r<0.05) newCard=getRandomByTier("legendary"); else if(r<0.2) newCard=getRandomByTier("epic"); else if(r<0.6) newCard=getRandomByTier("rare"); else newCard=getRandomByTier("common"); }
+  else if(cost==2000){ if(r<0.15) newCard=getRandomByTier("legendary"); else if(r<0.4) newCard=getRandomByTier("epic"); else if(r<0.8) newCard=getRandomByTier("rare"); else newCard=getRandomByTier("common"); }
+  else{ if(r<0.3) newCard=getRandomByTier("legendary"); else if(r<0.7) newCard=getRandomByTier("epic"); else if(r<0.95) newCard=getRandomByTier("rare"); else newCard=getRandomByTier("common"); }
   if(!collection.includes(newCard)) collection.push(newCard);
   chestResultText="You got: "+newCard.name+" ("+newCard.tier+")";
   showShop();
@@ -135,7 +131,7 @@ function getRandomByTier(tier){return allCards.filter(c=>c.tier===tier)[Math.flo
 
 // START BATTLE
 function startBattle(){
-  if(deck.length!==8){alert("Select 8 cards!"); return;}
+  if(deck.length===0){alert("Select at least 1 card!"); return;}
   gameState="play";
   ui.innerHTML='';
   deckDiv.style.display="none";
@@ -152,36 +148,23 @@ const waterHeight=40;
 // DEPLOY UNIT
 canvas.onclick=e=>{
   if(gameState!=="play") return;
+  if(deck.length===0) return;
   let lane=e.offsetX<210?0:1;
-  // check placement rules
-  if(selectedCard){
-    let card=selectedCard;
-    // If card is Pirahna, must be in water zone
-    if(card.name==="Pirahna" && (e.offsetY<waterY || e.offsetY>waterY+waterHeight)) return;
-    // Other cards cannot be placed in water
-    if(card.name!=="Pirahna" && e.offsetY>=waterY && e.offsetY<=waterY+waterHeight) return;
-    deployCard(card,lane,e.offsetY);
-  }
+  if(!selectedCard) selectedCard = deck[0]; // default to first card if none selected
+  let card=selectedCard;
+  if(card.name==="Pirahna" && (e.offsetY<waterY || e.offsetY>waterY+waterHeight)) return;
+  if(card.name!=="Pirahna" && e.offsetY>=waterY && e.offsetY<=waterY+waterHeight) return;
+  deployCard(card,lane,e.offsetY);
 };
 function deployCard(card,lane,y){
   if(elixir<card.cost) return;
   elixir-=card.cost;
-  if(card.count){
-    for(let i=0;i<card.count;i++) playerUnits.push({...card,x:lane*210+90+i*15,y:y,spawnTime:performance.now()});
-  }else{
-    let u={...card,x:lane*210+90,y:y,spawnTime:performance.now()};
-    if(u.name==="Pirahna") u.immortal=true;
-    if(u.name==="Magnet") u.duration=5000;
-    playerUnits.push(u);
-  }
+  if(card.count){ for(let i=0;i<card.count;i++) playerUnits.push({...card,x:lane*210+90+i*15,y:y,spawnTime:performance.now()}); }
+  else{ let u={...card,x:lane*210+90,y:y,spawnTime:performance.now()}; if(u.name==="Pirahna") u.immortal=true; if(u.name==="Magnet") u.duration=5000; playerUnits.push(u); }
 }
 
 // ENEMY SPAWN
-function spawnEnemy(){
-  if(gameState!=="play") return;
-  let e={hp:150,dmg:20,spd:0.8,x:Math.random()<0.5?90:300,y:50};
-  enemyUnits.push(e);
-}
+function spawnEnemy(){ if(gameState!=="play") return; let e={hp:150,dmg:20,spd:0.8,x:Math.random()<0.5?90:300,y:50}; enemyUnits.push(e); }
 setInterval(spawnEnemy,3000);
 
 // UPDATE LOOP
@@ -213,7 +196,6 @@ function update(dt){
   playerUnits=playerUnits.filter(u=>u.hp>0&&u.y>0);
   enemyUnits=enemyUnits.filter(e=>e.hp>0&&e.y<600);
 
-  // WIN/LOSS
   if(enemyUnits.length===0 && playerUnits.length>0 && now>5000){gold+=100; alert("You Win! +100 Gold"); showMenu();}
   if(enemyUnits.some(e=>e.y>=600)){alert("You Lose! +0 Gold"); showMenu();}
 }
@@ -224,10 +206,10 @@ function draw(){
   if(gameState!=="play") return;
 
   // DRAW ARENA
-  ctx.fillStyle="#2a5"; ctx.fillRect(0,0,420,600); // ground
-  ctx.fillStyle="#06f"; ctx.fillRect(0,waterY,420,waterHeight); // water
-  ctx.fillStyle="#8b4513"; ctx.fillRect(50,bridgeY,100,bridgeHeight); // left bridge
-  ctx.fillRect(270,bridgeY,100,bridgeHeight); // right bridge
+  ctx.fillStyle="#2a5"; ctx.fillRect(0,0,420,600);
+  ctx.fillStyle="#06f"; ctx.fillRect(0,waterY,420,waterHeight);
+  ctx.fillStyle="#8b4513"; ctx.fillRect(50,bridgeY,100,bridgeHeight);
+  ctx.fillRect(270,bridgeY,100,bridgeHeight);
 
   // UNITS
   playerUnits.forEach(u=>{ctx.fillStyle=u.tier==="legendary"?"gold":u.tier==="epic"?"purple":u.tier==="rare"?"blue":"green";ctx.fillRect(u.x-15,u.y-15,30,30); ctx.fillText(u.name,u.x-20,u.y-20);});
@@ -242,3 +224,4 @@ loop(0);
 </script>
 </body>
 </html>
+
